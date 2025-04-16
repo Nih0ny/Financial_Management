@@ -35,7 +35,7 @@ export class Receipt {
   @OneToMany(() => ReceiptItems, (items) => items.reciept)
   items: ReceiptItems[];
 
-  @Column({ type: 'float', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   total: number;
 
   @Column({

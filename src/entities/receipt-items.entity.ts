@@ -15,6 +15,6 @@ export class ReceiptItems {
   @Column()
   amount: number;
 
-  @Column({ type: 'float', precision: 10, scale: 2 })
+  @Column({ type: 'decimal', precision: 10, scale: 2 })
   price: number;
 }

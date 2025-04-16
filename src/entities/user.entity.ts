@@ -15,8 +15,8 @@ export class User {
   @Column({ type: 'text' })
   password: string;
 
-  @Column({ type: 'text', nullable: true })
-  avatar: string | null;
+  @Column({ type: 'text' })
+  avatar: string;
 
   @OneToMany(() => Receipt, (receipt) => receipt.user)
   receipts: Receipt[];
