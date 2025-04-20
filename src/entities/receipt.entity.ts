@@ -29,10 +29,15 @@ export class Receipt {
   @Column()
   merchant: string;
 
-  @ManyToOne(() => Category, (categoty) => categoty.name)
+  @ManyToOne(() => Category, (categoty) => categoty.receipts, {
+    eager: true,
+  })
   category: Category;
 
-  @OneToMany(() => ReceiptItems, (items) => items.reciept)
+  @OneToMany(() => ReceiptItems, (items) => items.reciept, {
+    cascade: true,
+    eager: true,
+  })
   items: ReceiptItems[];
 
   @Column({ type: 'decimal', precision: 10, scale: 2 })
@@ -43,5 +48,8 @@ export class Receipt {
     enum: PaymentType,
     default: PaymentType.OTHER,
   })
-  payment_type: PaymentType;
+  paymentType: PaymentType;
+
+  @Column({ type: 'timestamp' })
+  date: Date;
 }

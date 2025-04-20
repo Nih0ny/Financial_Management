@@ -12,10 +12,6 @@ export class UserService {
     private userRepository: Repository<User>,
   ) {}
 
-  async findOne(id: number): Promise<User | null> {
-    return this.userRepository.findOneBy({ id });
-  }
-
   async findOneByEmail(email: string): Promise<User | null> {
     return this.userRepository.findOneBy({ email });
   }
@@ -34,7 +30,8 @@ export class UserService {
     return this.userRepository.findOneBy({ id });
   }
 
-  async delete(id: number): Promise<void> {
-    await this.userRepository.delete(id);
+  async delete(id: number): Promise<boolean> {
+    const result = await this.userRepository.delete(id);
+    return !result.affected ? false : true;
   }
 }

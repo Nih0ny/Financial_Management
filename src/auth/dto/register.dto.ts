@@ -10,5 +10,5 @@ export class RegisterDto extends SendCodeDto {
   password: string;
 
   @IsOptional()
-  avatar: string;
+  avatar: string | Buffer<ArrayBufferLike>;
 }

@@ -12,8 +12,6 @@ import {
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { FileInterceptor } from '@nestjs/platform-express';
-import * as path from 'path';
-
 import { LoginDto, LoginResponseDto } from './dto/login.dto';
 import { RegisterVerifyDto } from './dto/register-verify.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -24,13 +22,13 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @UseInterceptors(FileInterceptor('avatar', { dest: './avatars' }))
+  @UseInterceptors(FileInterceptor('avatar'))
   async Register(
     @UploadedFile(
       new ParseFilePipe({
         fileIsRequired: false,
         validators: [
-          new MaxFileSizeValidator({ maxSize: 10240 }),
+          new MaxFileSizeValidator({ maxSize: 1024 * 200 }),
           new FileTypeValidator({ fileType: /^image/ }),
         ],
       }),
@@ -38,9 +36,7 @@ export class AuthController {
     avatar: Express.Multer.File,
     @Body() body: RegisterDto,
   ) {
-    body.avatar = avatar
-      ? path.join('avatars', avatar.filename)
-      : 'avatars/default';
+    body.avatar = avatar ? avatar.buffer : 'default';
 
     await this.authService.register(body);
   }
@@ -55,7 +51,7 @@ export class AuthController {
     return await this.authService.login(body.email, body.password);
   }
 
-  @Post('refresh-token')
+  @Post('refresh-tokens')
   async RefreshTokens(
     @Body() body: { refreshToken: string },
   ): Promise<LoginResponseDto> {

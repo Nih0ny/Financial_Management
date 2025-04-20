@@ -8,6 +8,8 @@ import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { UserModule } from 'src/user/user.module';
 import { MailModule } from 'src/mail/mail.module';
+import { MulterModule } from '@nestjs/platform-express';
+import * as multer from 'multer';
 
 @Module({
   imports: [
@@ -19,7 +21,10 @@ import { MailModule } from 'src/mail/mail.module';
     JwtModule.register({
       global: true,
       secret: process.env.JWT_ACCESS_SECRET,
-      signOptions: { expiresIn: '60s' },
+      signOptions: { expiresIn: '6000s' },
+    }),
+    MulterModule.register({
+      storage: multer.memoryStorage(),
     }),
   ],
   controllers: [AuthController],

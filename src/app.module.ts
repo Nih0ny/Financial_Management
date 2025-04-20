@@ -12,6 +12,15 @@ import { ReceiptItems } from './entities/receipt-items.entity';
 import { CacheModule } from '@nestjs/cache-manager';
 import { MailService } from './mail/mail.service';
 import { MailModule } from './mail/mail.module';
+import { ReceiptModule } from './receipt/receipt.module';
+import { UploadDataModule } from './upload-data/upload-data.module';
+import { OpenAiService } from './open-ai/open-ai.service';
+import { OpenAiModule } from './open-ai/open-ai.module';
+import { GetDataModule } from './get-data/get-data.module';
+import { GetAnalyticsModule } from './get-analytics/get-analytics.module';
+import { CategoryModule } from './category/category.module';
+import { ReceiptItemsService } from './receipt-items/receipt-items.service';
+import { ReceiptItemsModule } from './receipt-items/receipt-items.module';
 
 @Module({
   imports: [
@@ -30,8 +39,15 @@ import { MailModule } from './mail/mail.module';
       synchronize: true,
     }),
     MailModule,
+    ReceiptModule,
+    UploadDataModule,
+    OpenAiModule,
+    GetDataModule,
+    GetAnalyticsModule,
+    CategoryModule,
+    ReceiptItemsModule,
   ],
   controllers: [AppController],
-  providers: [AppService, MailService],
+  providers: [AppService, MailService, OpenAiService],
 })
 export class AppModule {}

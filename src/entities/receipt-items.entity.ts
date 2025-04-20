@@ -6,7 +6,10 @@ export class ReceiptItems {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ManyToOne(() => Receipt, (receipt) => receipt.items)
+  @ManyToOne(() => Receipt, (receipt) => receipt.items, {
+    onDelete: 'CASCADE',
+    onUpdate: 'CASCADE',
+  })
   reciept: Receipt;
 
   @Column()

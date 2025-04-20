@@ -5,7 +5,7 @@ export interface UserVerify {
 
   password: string;
 
-  avatar: string;
+  avatar: string | Buffer<ArrayBufferLike>;
 
   activationCode: string;
 }
