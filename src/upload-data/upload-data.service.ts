@@ -15,7 +15,7 @@ import { ConfirmReceipParsingDto } from './dto/confirm-receipt-parsing.dto';
 import { OpenAiService } from 'src/open-ai/open-ai.service';
 import { v4 as uuidv4 } from 'uuid';
 import * as path from 'path';
-import { ReceiptInterface } from './interface/receipt.interface';
+import { ReceiptInterface } from './interfaces/receipt.interface';
 
 @Injectable()
 export class UploadDataService {
