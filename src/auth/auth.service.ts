@@ -124,6 +124,7 @@ export class AuthService {
     await this.cacheManager.set(
       payload.email + ' ' + 'refresh',
       tokens.refreshToken,
+      1000 * 60 * 60 * 24 * 7,
     );
     return tokens;
   }
