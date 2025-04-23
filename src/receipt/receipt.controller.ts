@@ -29,10 +29,4 @@ export class ReceiptController {
   async delete(@Param('id') id: number) {
     if (!(await this.receiptService.delete(id))) throw new NotFoundException();
   }
-
-  //find all by user_id
-  //find one by id
-  //create
-  //update
-  //delete
 }

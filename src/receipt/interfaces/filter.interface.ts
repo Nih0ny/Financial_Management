@@ -1,4 +1,5 @@
-export interface ReceiptFilterDto {
+export interface Filter {
+  userId: number;
   merchants?: string;
   categories?: string;
   startDate?: string;

@@ -1,105 +1,128 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { ReceiptService } from 'src/receipt/receipt.service';
-import { AnalyticsQueryDto } from './dto/analytics-query.dto';
-import { PaymentType, Receipt } from 'src/entities/receipt.entity';
-import { Category } from 'src/entities/category.entity';
-import { AnalyticsResultDto } from './dto/analytics-result.dto';
-import { Filter } from './interfaces/filter.interface';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
+import { AnalyticsQueryDto } from './dto/analytics-query.dto';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { NestedNode } from './interfaces/nested-node.interface';
+import { ReceiptService } from 'src/receipt/receipt.service';
+import * as moment from 'moment';
+import { GroupedReceiptTotalsResult } from 'src/receipt/interfaces/query-result.interface';
 
 @Injectable()
 export class GetAnalyticsService {
-  constructor(
-    @InjectRepository(Receipt)
-    private receiptRepository: Repository<Receipt>,
-    private readonly receiptService: ReceiptService,
-  ) {}
-  async getAnalytics(filter: AnalyticsQueryDto): Promise<any> {
-    const receipts = await this.receiptService.getFilteredReceipts({
-      userId: 5,
-      ...filter,
-    });
-    console.log(receipts);
-    const arrOrder = filter.groupOrder?.split(',') ?? [];
-    for (let i = arrOrder.length; i > 0; i--) {
-      console.log(arrOrder.slice(0, i));
-      console.log(
-        '12', //await this.secondTry({ userId: 5, ...filter }, arrOrder.slice(0, i)),
-      );
-    }
-    const grouped = this.groupReceipts(
-      receipts,
-      filter.groupOrder?.split(',') ?? [],
+  constructor(private readonly receiptService: ReceiptService) {}
+
+  async getAnalytics(
+    filter: AnalyticsQueryDto,
+    userId: number,
+  ): Promise<NestedNode> {
+    const groupOrder = filter.groupOrder?.split(',') ?? [];
+    const { dateFormat, ...queryFilter } = filter;
+
+    const queryResult = await this.receiptService
+      .getGroupedReceiptTotals({ userId, ...queryFilter }, groupOrder)
+      .catch(() => {
+        throw new BadRequestException(
+          'Invalid query. Please verify your request parameters and try again.',
+        );
+      });
+
+    return this.buildNestedStructure(
+      queryResult,
+      groupOrder,
+      'total',
+      'ids',
+      dateFormat,
     );
-    //this.calculateAnalytics(receipts, filter.groupOrder?.split(',') ?? []);
-    return grouped;
   }
 
-  private async getTotlaByGoups(
-    filter: Filter,
-    groupOrder: string[],
-  ): Promise<any> {
-    const query = this.receiptRepository
-      .createQueryBuilder('receipt')
-      .select('SUM(receipt.total)', 'total_sum');
+  private buildNestedStructure(
+    data: GroupedReceiptTotalsResult[],
+    keys: string[],
+    valueKey: string,
+    idKey: string,
+    dateFormat?: string,
+  ): NestedNode {
+    const root: NestedNode = {};
+    let grandTotal = 0;
 
-    const userId = filter.userId;
-    query.andWhere('receipt.userId = :userId', { userId });
+    for (const item of data) {
+      const value = parseFloat(item[valueKey] as string);
+      grandTotal += value;
 
-    if (filter.merchants) {
-      const merchants = filter.merchants.split(',');
-      query.andWhere('receipt.merchant IN (:...merchants)', { merchants });
+      let currentLevel: NestedNode = root;
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+
+        const keyValue =
+          key === 'date' && dateFormat
+            ? moment(item[key] as Date).format(dateFormat)
+            : (item[key] as string);
+
+        console.log(key, ' : ', keyValue);
+        if (dateFormat) console.log(dateFormat);
+
+        if (typeof keyValue !== 'string') continue;
+
+        if (typeof currentLevel[keyValue] !== 'object') {
+          currentLevel[keyValue] = {};
+        }
+
+        const childNode = currentLevel[keyValue] as NestedNode;
+
+        if (!childNode.total) {
+          childNode.total = '0';
+        }
+
+        childNode.total = (parseFloat(childNode.total) + value).toFixed(2);
+
+        currentLevel = childNode;
+
+        if (i === keys.length - 1) {
+          const rawIds = (item[idKey] as string) ?? '';
+          const ids = rawIds.split(',').map((id: string) => id.trim());
+          childNode.ids = childNode.ids
+            ? Array.from(new Set([...childNode.ids, ...ids]))
+            : ids;
+        }
+      }
     }
 
-    if (filter.categories) {
-      const categoryNames = filter.categories.split(',');
-      query.andWhere('receipt.categoryName IN (:...categoryNames)', {
-        categoryNames,
-      });
-    }
+    const formatAndAddPercent = (
+      node: NestedNode,
+      parentTotal: number,
+    ): void => {
+      for (const key in node) {
+        const child = node[key];
+        if (
+          typeof child === 'object' &&
+          child !== null &&
+          'total' in child &&
+          typeof child.total === 'string'
+        ) {
+          const childTotal = parseFloat(child.total);
+          if (parentTotal > 0) {
+            child.inPercent = ((childTotal / parentTotal) * 100).toFixed(2);
+          }
 
-    if (filter.startDate) {
-      query.andWhere('receipt.date >= :startDate', {
-        startDate: new Date(filter.startDate),
-      });
-    }
+          const hasChildren = Object.entries(child).some(
+            ([k, v]) =>
+              typeof v === 'object' &&
+              k !== 'ids' &&
+              k !== 'inPercent' &&
+              k !== 'total',
+          );
 
-    if (filter.endDate) {
-      query.andWhere('receipt.date <= :endDate', {
-        endDate: new Date(filter.endDate),
-      });
-    }
+          if (hasChildren) {
+            formatAndAddPercent(child, childTotal);
+          }
+        }
+      }
+    };
 
-    if (filter.paymentTypes) {
-      const paymentTypes = filter.paymentTypes.split(',') as PaymentType[];
-      query.andWhere('receipt.paymentType IN (:...paymentTypes)', {
-        paymentTypes,
-      });
-    }
+    formatAndAddPercent(root, grandTotal);
+    root.total = grandTotal.toFixed(2);
 
-    if (filter.totalFrom) {
-      query.andWhere('receipt.total >= :totalFrom', {
-        totalFrom: parseFloat(filter.totalFrom),
-      });
-    }
-
-    if (filter.totalTo) {
-      query.andWhere('receipt.total <= :totalTo', {
-        totalTo: parseFloat(filter.totalTo),
-      });
-    }
-
-    // if (filter) {
-    //   const groupOrder = groupOrder2;
-    //   if (!groupOrder) return;
-    //   for (const order of groupOrder) {
-    //     query.addGroupBy(`receipt.${order}`);
-    //     query.addSelect(`receipt.${order}`);
-    //   }
-    // }
-
-    const res = await query.getRawMany();
-    return res;
+    return root;
   }
 }

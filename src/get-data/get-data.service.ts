@@ -19,8 +19,8 @@ export class GetDataService {
     return castedReceipts;
   }
 
-  async searchReceipts(filter: ReceiptFilterDto) {
-    return await this.receiptService.getFilteredReceipts(filter);
+  async searchReceipts(filter: ReceiptFilterDto, userId: number) {
+    return await this.receiptService.getFilteredReceipts({ userId, ...filter });
   }
 
   castReceipt(receipt: Receipt): UserReceiptsDto {

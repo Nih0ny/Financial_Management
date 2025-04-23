@@ -19,6 +19,7 @@ import { CacheManagerStore } from 'cache-manager';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { createReadStream } from 'fs';
 import { basename, join } from 'path';
+import { ReceiptFilterDto } from 'src/receipt/dto/receipt-filter.dto';
 
 @Controller('get-data')
 @UseGuards(AuthGuard)
@@ -59,23 +60,8 @@ export class GetDataController {
   @Get()
   async getFilteredReceipts(
     @Request() req: { user: { id: number } },
-    @Query('merchants') merchants?: string,
-    @Query('categories') categories?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('paymentTypes') paymentTypes?: string,
-    @Query('totalFrom') totalFrom?: string,
-    @Query('totalTo') totalTo?: string,
+    @Query() query: ReceiptFilterDto,
   ) {
-    return this.getDataService.searchReceipts({
-      userId: req.user.id,
-      merchants,
-      categories,
-      startDate,
-      endDate,
-      paymentTypes,
-      totalFrom,
-      totalTo,
-    });
+    return this.getDataService.searchReceipts(query, req.user.id);
   }
 }

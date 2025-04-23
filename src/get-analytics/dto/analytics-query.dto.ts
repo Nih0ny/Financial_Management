@@ -19,6 +19,10 @@ export class AnalyticsQueryDto {
 
   @IsOptional()
   @IsString()
+  dateFormat?: string;
+
+  @IsOptional()
+  @IsString()
   paymentTypes?: string;
 
   @IsOptional()

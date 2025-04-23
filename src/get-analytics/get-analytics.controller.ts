@@ -9,14 +9,13 @@ import { Repository } from 'typeorm';
 @Controller('get-analytics')
 @UseGuards(AuthGuard)
 export class GetAnalyticsController {
-  constructor(
-    @InjectRepository(Receipt)
-    private receiptRepository: Repository<Receipt>,
-    private readonly getAnalyticsService: GetAnalyticsService,
-  ) {}
+  constructor(private readonly getAnalyticsService: GetAnalyticsService) {}
 
   @Get()
-  async getAnalyticsReq(@Query() query: AnalyticsQueryDto) {
-    return this.getAnalyticsService.getAnalytics(query);
+  async getAnalyticsReq(
+    @Query() query: AnalyticsQueryDto,
+    @Request() req: { user: { id: number } },
+  ) {
+    return this.getAnalyticsService.getAnalytics(query, req.user.id);
   }
 }

@@ -6,11 +6,12 @@ import {
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { PaymentType, Receipt } from 'src/entities/receipt.entity';
-import { Repository } from 'typeorm';
+import { Repository, SelectQueryBuilder } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ReceiptItemsService } from 'src/receipt-items/receipt-items.service';
 import { ReceiptItemDto } from 'src/upload-data/dto/receipt-item.dto';
-import { ReceiptFilterDto } from './dto/receipt-filter.dto';
+import { GroupedReceiptTotalsResult } from './interfaces/query-result.interface';
+import { Filter } from './interfaces/filter.interface';
 
 @Injectable()
 export class ReceiptService {
@@ -84,13 +85,40 @@ export class ReceiptService {
     return total == receiptTotal;
   }
 
-  async getFilteredReceipts(filter: ReceiptFilterDto): Promise<Receipt[]> {
+  async getFilteredReceipts(filter: Filter): Promise<Receipt[]> {
     const query = this.receiptRepository
       .createQueryBuilder('receipt')
-      .leftJoinAndSelect('receipt.category', 'category')
       .leftJoinAndSelect('receipt.items', 'items');
 
-    const userId = filter.userId;
+    this.addFilterToQuery(query, filter);
+
+    return query.getMany();
+  }
+
+  async getGroupedReceiptTotals(
+    filter: Filter,
+    groupOrder: string[],
+  ): Promise<GroupedReceiptTotalsResult[]> {
+    const query = this.receiptRepository
+      .createQueryBuilder('receipt')
+      .select('SUM(receipt.total)', 'total')
+      .addSelect(`STRING_AGG(receipt.id::text, ',')`, 'ids');
+
+    this.addFilterToQuery(query, filter);
+
+    for (const group of groupOrder) {
+      query.addGroupBy(`receipt.${group}`);
+      query.addSelect(`receipt.${group}`, `${group}`);
+    }
+
+    return await query.getRawMany<GroupedReceiptTotalsResult>();
+  }
+
+  private addFilterToQuery(
+    query: SelectQueryBuilder<Receipt>,
+    filter: Filter,
+  ): void {
+    const { userId } = filter;
     query.andWhere('receipt.userId = :userId', { userId });
 
     if (filter.merchants) {
@@ -100,7 +128,9 @@ export class ReceiptService {
 
     if (filter.categories) {
       const categoryNames = filter.categories.split(',');
-      query.andWhere('category.name IN (:...categoryNames)', { categoryNames });
+      query.andWhere('receipt.categoryName IN (:...categoryNames)', {
+        categoryNames,
+      });
     }
 
     if (filter.startDate) {
@@ -133,7 +163,5 @@ export class ReceiptService {
         totalTo: parseFloat(filter.totalTo),
       });
     }
-
-    return query.getMany();
   }
 }
